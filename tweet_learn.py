@@ -10,13 +10,13 @@ from sklearn import svm
 import pylab as pl
 import ner
 fn1 = "tweetSubset_labeled.csv"
-fn2 = "training_data.csv"
+fn2 = "tweetSubset_labeled_mod.csv"
 
 def read_tweets():
     fet = list()
     ans = list()
     with open(fn2, 'r') as csvfile:
-        tweet_reader = csv.reader(csvfile, delimiter = ',')
+        tweet_reader = csv.reader(csvfile, delimiter = '\t')
         tweet_reader.next()
         print "reading: ", fn2
 
@@ -28,28 +28,31 @@ def read_tweets():
             else:
                 website = 1
             ret_cnt = row[7]
+#            print "ret_cnt: ", ret_cnt
             if ret_cnt == '':
+                print "derp"
                 continue
             ret_cnt = int(row[7])
             rep = int(row[8])
             label = row[9]
-            if label == 'I':
+            if label == 'I' or label == 'i':
                 label = 1
-            elif label == 'C':
+            elif label == 'C' or label == 'c':
                 label = 0
             else:
+#                print "label: ", label
                 continue
             num_people = int(row[10])
             num_orgs = int(row[11])
             num_locs = int(row[12])
 
-            print "herp: ", (website, ret_cnt, rep, num_people, num_orgs, num_locs)
+#            print "herp: ", (website, ret_cnt, rep, num_people, num_orgs, num_locs)
             fet.append((website, ret_cnt, rep,  num_people, num_orgs, num_locs))
             ans.append(label)
 
-        print "fet: ", fet
+#        print "fet: ", fet
         np_fet = np.array(fet)
-        print "ans: ", ans
+#        print "ans: ", ans
         np_ans = np.array(ans)
 
     return (np_fet, np_ans)
@@ -80,7 +83,7 @@ def fit_plot():
 def ner_populate():
     """PRE:  java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML  --------- MUST BE RUNNING
        POST: populate the NER columns in our dataset"""
-    ncols = 9
+    ncols = 10
     tweet_set = list()
     tagger = ner.SocketNER(host='localhost', port=8080)
 
