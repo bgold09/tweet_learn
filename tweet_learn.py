@@ -4,61 +4,21 @@
 #Date:    Mon 17 Feb 2014 01:48:10 PM EST
 #Purpose: Test ML algorithms on our CSV
 
+import os
 import csv
 import numpy as np
 from sklearn import svm
 import pylab as pl
 import ner
-fn1 = "tweetSubset_labeled.csv"
-fn2 = "tweetSubset_labeled_mod.csv"
+import math
+from pandas import read_csv
+import MySQLdb as mdb
 
-def read_tweets():
-    fet = list()
-    ans = list()
-    with open(fn2, 'r') as csvfile:
-        tweet_reader = csv.reader(csvfile, delimiter = '\t')
-        tweet_reader.next()
-        print "reading: ", fn2
-
-        for row in tweet_reader:
-#            print row
-            website = row[4]
-            if website == '':
-                website = 0
-            else:
-                website = 1
-            ret_cnt = row[7]
-#            print "ret_cnt: ", ret_cnt
-            if ret_cnt == '':
-                print "derp"
-                continue
-            ret_cnt = int(row[7])
-            rep = int(row[8])
-            label = row[9]
-            if label == 'I' or label == 'i':
-                label = 1
-            elif label == 'C' or label == 'c':
-                label = 0
-            else:
-#                print "label: ", label
-                continue
-            num_people = int(row[10])
-            num_orgs = int(row[11])
-            num_locs = int(row[12])
-
-#            print "herp: ", (website, ret_cnt, rep, num_people, num_orgs, num_locs)
-            fet.append((website, ret_cnt, rep,  num_people, num_orgs, num_locs))
-            ans.append(label)
-
-#        print "fet: ", fet
-        np_fet = np.array(fet)
-#        print "ans: ", ans
-        np_ans = np.array(ans)
-
-    return (np_fet, np_ans)
-
-def fit_plot():
-    ml = read_tweets()
+tweet_subset = "tweetSubset_danielle.csv"
+transformed_set = "features.csv"
+    
+def fit_plot(ml):
+    """use a SVM to create a classifier and make a plot of the data points"""
     clf = svm.SVC(kernel='linear')
     clf.fit(ml[0], ml[1])
     w = clf.coef_[0]
@@ -76,48 +36,116 @@ def fit_plot():
     pl.scatter(clf.support_vectors_[:, 0], clf.support_vectors_[:, 1],
                s=80, facecolors='none')
     pl.scatter(ml[0][:, 0], ml[0][:, 1], c=ml[1], cmap=pl.cm.Paired)
-
     pl.axis('tight')
+#    pl.axis([-2, 2, -50, 50])
     pl.show()
 
-def ner_populate():
-    """PRE:  java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML  --------- MUST BE RUNNING
-       POST: populate the NER columns in our dataset"""
-    ncols = 10
+    return clf
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+def extract_transform_data():
+    """PRE:  java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML  --------- MUST BE RUNNING to get the Named-Entity data. 
+             The other data comes from the SQL table init_data     
+      POST: populate the NER columns in our dataset"""
+
+    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    cur = con.cursor(mdb.cursors.DictCursor)
     tweet_set = list()
+    labels = list()
     tagger = ner.SocketNER(host='localhost', port=8080)
 
-    with open(fn1, 'r') as csvfile:
-        tweet_reader = csv.reader(csvfile, delimiter = ',')
+    cur.execute("select * from init_data")
+    rows = cur.fetchall()
+
+    for row in rows:
+        ncols = len(row.keys())
+        st = row["tweet"]                     #get the text of the tweet
+        di = tagger.get_entities(st)
+        num_people = num_orgs = num_locs = 0
+            
+        if 'PERSON' in di:
+            num_people = len(di['PERSON']) 
+        if 'ORGANIZATION' in di:
+            num_orgs = len(di['ORGANIZATION'])
+        if 'LOCATION' in di:
+            num_locs = len(di['LOCATION'])
+
+        website = row["website"]
+        if website == '':
+            website = 0
+        else:
+            website = 1
+        ret_cnt = int(row["raw_retweet_count"])
+        #            print "ret_cnt: ", ret_cnt
+        if ret_cnt == '':
+            continue
+        ret_cnt = int(row["raw_retweet_count"])
+        tweet = row["tweet"]
+        if tweet == "":
+            continue
+        ret = int(tweet[0].__contains__('@'))
+        rep = int(tweet[0:2].__contains__('RT'))
+        cent = row["eig_centrality"]
+        if cent == None:
+            continue
+
+        li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
+        label = row["I_c"]
+        labels.append(label)
+        tweet_set.append(li)
+    
+    print "subset of features: ", tweet_set[:10]
+    
+    cur.close()
+    con.close()
+    return (np.array(tweet_set), np.array(labels))
+#---------------------------------------------------------------------
+#---------------------------------------------------------------------
+def store_features(tweet_set):
+    """create and populate a sql table of features"""
+    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    cur = con.cursor(mdb.cursors.DictCursor)
+    cur.execute("drop table if exists nght_regime;")
+    cur.execute("create table features (website varchar(140), ret_cnt smallint, rep smallint, ret smallint, num_people smallint, num_orgs smallint, num_locs smallint);")
+        
+    for row in tweet_set:
+        cur.execute("insert into features (website, ret_cnt, rep, ret, num_people, num_orgs, num_locs) values (%s, %s, %s, %s, %s, %s, %s, %s)", (row["website"], row["ret_cnt"], row["label"], row["rep"], row["ret"], row["num_people"], row["num_orgs"], row["num_locs"]))
+
+    os.chdir("../")
+    con.commit()
+    cur.close()
+    con.close()
+#---------------------------------------------------------------------
+#---------------------------------------------------------------------
+def store_initial_data():
+    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    cur = con.cursor(mdb.cursors.DictCursor)
+    cur.execute("drop table if exists init_data;")
+    cur.execute("create table init_data (tweet_id bigint, source_user_id bigint, rt_user_id bigint, tweet varchar(255), website varchar(140), tweet_time timestamp, raw_retweet_count bigint, I_c smallint);")
+
+    os.chdir("data")
+    with open(tweet_subset, 'r') as csvfile:
+        tweet_reader = csv.DictReader(csvfile, delimiter = '\t')
         tweet_reader.next()
-        print "reading: ", fn1
 
         for row in tweet_reader:
-            st = row[3]                     #get the text of the tweet
-            di = tagger.get_entities(st)
-            num_people = num_orgs = num_locs = 0
+            cur.execute("insert into init_data (tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count, I_c) values (%s, %s, %s, %s, %s, %s, %s, %s)", (row["tweet_id"], row["source_user_id"], row["rt_user_id"], row["tweet"], row["website"], row["tweet_time"], row["raw_retweet_count"], row["I_c"]))
 
-            if 'PERSON' in di:
-                num_people = len(di['PERSON']) 
-            if 'ORGANIZATION' in di:
-                num_orgs = len(di['ORGANIZATION'])
-            if 'LOCATION' in di:
-                num_locs = len(di['LOCATION'])
-
-            li = [row[col] for col in xrange(ncols)]
-            li.extend([num_people, num_orgs, num_locs])
-            tweet_set.append(li)
-#            print "li: ", li
-
-    print "subest of tweet_set: ", tweet_set[:10]
-
-    with open(fn2, 'w') as csvfile:
-        tweet_writer = csv.writer(csvfile, delimiter = ',')
-        for row in tweet_set:
-#            print "row: ", row
-            tweet_writer.writerow(row)
-            
-            
-            
+    con.commit()
+    cur.close()
+    con.close()
+    os.chdir("../")
+#---------------------------------------------------------------------
+#---------------------------------------------------------------------
+def add_centrality_feature():
+    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    cur = con.cursor(mdb.cursors.DictCursor)
+    
+#    cur.execute("alter table init_data add column eig_centrality float")
+    cur.execute("update init_data id inner join users u on id.source_user_id = u.user_id set id.eig_centrality = u.eigenvector_centrality")
+    con.commit()
+    cur.close()
+    con.close()
+        
             
     
