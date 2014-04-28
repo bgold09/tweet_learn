@@ -44,6 +44,7 @@ def hashtag_count(hashtags):
                 
 # find all unique hashtags
 def get_hashtags(conn):
+    """Find all unique hashtags in testing data tweets (case-insensitive)."""
     all_hashtags = set()
     # anything starting with '#' is a hashtag
     r = re.compile(r"([#])(\w+)\b")
@@ -62,6 +63,7 @@ def get_hashtags(conn):
     return all_hashtags
 
 def update_hashtag_schema(conn, hashtags):
+    """Update the schema init data table with columns for each hashtag in hashtags."""
     curs = conn.cursor()
     curs.execute('SELECT COLUMN_NAME \
                   FROM INFORMATION_SCHEMA.COLUMNS \
