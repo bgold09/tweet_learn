@@ -1,5 +1,4 @@
 #!/usr/bin/env 
-
 #Author:  Steven Styer
 #Date:    Mon 17 Feb 2014 01:48:10 PM EST
 #Purpose: Test ML algorithms on our CSV
@@ -13,6 +12,7 @@ import ner
 import math
 from pandas import read_csv
 import MySQLdb as mdb
+import gensim as gs
 
 tweet_subset = "tweetSubset_danielle.csv"
 transformed_set = "features.csv"
@@ -89,7 +89,8 @@ def extract_transform_data():
         if cent == None:
             continue
 
-        li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
+#        li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
+        li = [ret_cnt, rep, num_people, num_locs, cent]
         label = row["I_c"]
         labels.append(label)
         tweet_set.append(li)
@@ -146,6 +147,32 @@ def add_centrality_feature():
     con.commit()
     cur.close()
     con.close()
+#---------------------------------------------------------------------
+#---------------------------------------------------------------------            
+def get_dict_corpus():
+    """return and serialize dictionary and corpus from tweets"""
+    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    cur = con.cursor(mdb.cursors.DictCursor)
+
+    cur.execute("select tweet from tweets order by RAND() limit 1000")
+    rows = cur.fetchall()
+    tweets = list()
+    for row in rows:
+        tweets.append(row['tweet'].split())
+
+    with open("data/stop_words.txt") as f:
+        stop_words = np.array(f.read().splitlines())
         
-            
-    
+    for tweet in tweets:
+        for word in tweet:
+            if word in stop_words:
+                tweet.remove(word)
+
+    dictionary = gs.corpora.Dictionary(tweets)
+    dictionary.save("data/lda.dict")
+    corpus = [dictionary.doc2bow(tweet) for tweet in tweets]
+    gs.corpora.MmCorpus.serialize("data/lda-corpus.mm", corpus)
+
+    return (dictionary, corpus)
+#---------------------------------------------------------------------
+#---------------------------------------------------------------------            
