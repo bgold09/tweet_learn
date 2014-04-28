@@ -43,21 +43,37 @@ def hashtag_count(hashtags):
 	return ht_count  
                 
 # find all unique hashtags
-def get_hashtags():
+def get_hashtags(conn):
     all_hashtags = set()
     # anything starting with '#' is a hashtag
     r = re.compile(r"([#])(\w+)\b")
 
-    con = mdb.connect(host="localhost", user="brian", passwd="", db="twitter") 
-    curs = con.cursor()
+    # con = mdb.connect(host="localhost", user="brian", passwd="", db="twitter") 
+    curs = conn.cursor()
     curs.execute("SELECT tweet FROM init_data")
 
     for row in curs.fetchall():
-        # each row is a 1-tuple containing only the tweet text
+        # EACH row is a 1-tuple containing only the tweet text
         # matches are returned as tuples of the form ('#', 'hashtag text')
         hashtags = r.findall(row[0])   
-        hashtags = set([str.lower(x[1]) for x in hashtags])
+        hashtags = frozenset([str.lower(x[1]) for x in hashtags])
         all_hashtags = all_hashtags.union(hashtags)
     
     return all_hashtags
+
+def update_hashtag_schema(conn, hashtags):
+    curs = conn.cursor()
+    curs.execute('SELECT COLUMN_NAME \
+                  FROM INFORMATION_SCHEMA.COLUMNS \
+                  WHERE TABLE_SCHEMA = "twitter" AND TABLE_NAME = "init_data" \
+                    AND COLUMN_NAME LIKE "tag_%"')
+    
+    # get names of all columns already in the table
+    columns = frozenset(curs.fetchall())
+    
+    # update the table schema
+    for tag in hashtags:
+        name = 'tag_' + tag
+        if name not in columns:
+            curs.execute('ALTER TABLE init_data ADD ' + name + ' VARCHAR(64)')
 
