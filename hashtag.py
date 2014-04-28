@@ -77,5 +77,5 @@ def update_hashtag_schema(conn, hashtags):
     for tag in hashtags:
         name = 'tag_' + tag
         if name not in columns:
-            curs.execute('ALTER TABLE init_data ADD ' + name + ' VARCHAR(64)')
+            curs.execute('ALTER TABLE init_data ADD ' + name + ' VARCHAR(64) DEFAULT -1')
 
