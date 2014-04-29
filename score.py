@@ -9,8 +9,8 @@ def cross_validation(n, features, labels, penalty):
     
         Args:
             n: number of folds
-            features: feature vector
-            labels: labels for feature vectors
+            features: feature matrix
+            labels: labels for feature matrix
             penalty: penalty parameter for classifier
 
         Returns:
@@ -28,29 +28,46 @@ def cross_validation(n, features, labels, penalty):
         y_test  = y_train.pop(k)
         y_train = np.concatenate(y_train)
         scores.append(clf.fit(X_train, y_train).score(X_test, y_test))
-    return scores
+    return np.array(scores)
 
-def permutation_test(num_sims, folds, features, labels):
+
+def score_stat(features, labels, test_size, penalty):
+    """Train a SVM and get the score of classifying test_size data points
+
+        Args:
+            features: feature matrix
+            labels: labels for feature matrix
+            test_size: size of the testing set
+            penalty: penalty parameter for classifier
+
+        Returns:
+            accuracy of the model's classification of test_size data points
+    """
+    clf = svm.SVC(kernel='linear', C=penalty).fit(features[:-test_size], labels[:-test_size])
+    score = clf.score(features[-test_size:], labels[-test_size:])
+    return score
+
+
+def permutation_test(num_sims, folds, test_size, features, labels):
     """Run a permutation test   
 
         Args:
             num_sims: number of simulations to run
             folds: number of folds to use for cross validation
-            features: feature vector
-            labels: labels for feature vectors
+            features: feature matrix
+            labels: labels for feature matrix
 
         Returns: 
             p-value for the permutation test, i.e. how many tests had 
             a test statistic greater than or equal to the original 
             test statistic
     """
-    scores = cross_validation(folds, features, labels, 1.0)
-    test_stat = scores.mean()
+    la = labels.copy()
+    test_stat = score_stat(features, la, test_size)
     count = 0
     for p in xrange(0, num_sims):
-        random.shuffle(labels)
-        s = cross_validation(folds, features, labels, 1.0)
-        t = s.mean()
+        random.shuffle(la)
+        t = score_stat(features, la, test_size)
         if t >= test_stat:
             count += 1
     pvalue = count / float(num_sims)
