@@ -10,9 +10,8 @@ from sklearn import svm
 import pylab as pl
 import ner
 import math
-from pandas import read_csv
 import MySQLdb as mdb
-import gensim as gs
+#import gensim as gs
 
 tweet_subset = "tweetSubset_danielle.csv"
 transformed_set = "features.csv"
@@ -93,8 +92,7 @@ def extract_transform_data(tbl_name, a, b):
         cent = row["eig_centrality"]
         if cent == None:
             continue
-
-#        li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
+        
         li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
         label = row["I_c"]
 
@@ -139,7 +137,7 @@ def store_initial_data(tbl_name):
             ic = row["I_c"]
             if ic == 'i':                  #informative is 1
                 ic = 1                   
-            elif ic == 'c':                          #conversational is -1
+            elif ic == 'c':                #conversational is -1
                 ic = -1
             else:
                 continue
@@ -188,12 +186,13 @@ def get_dict_corpus():
     return (dictionary, corpus)
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
-def cross_validation(n, ml, clf):
+def cross_validation(n, ml, penalty):
     """return the scores for 'n' fold cross validation"""
+    clf = svm.SVC(kernel='linear', C=penalty).fit(ml[0], ml[1])
     X_folds = np.array_split(ml[0], n)
     y_folds = np.array_split(ml[1], n)
     scores = list()
-    for k in range(n):
+    for k in xrange(n):
         X_train = list(X_folds)
         X_test  = X_train.pop(k)
         X_train = np.concatenate(X_train)
