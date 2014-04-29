@@ -188,3 +188,18 @@ def get_dict_corpus():
     return (dictionary, corpus)
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
+def cross_validation(n, ml, clf):
+    """return the scores for 'n' fold cross validation"""
+    X_folds = np.array_split(ml[0], n)
+    y_folds = np.array_split(ml[1], n)
+    scores = list()
+    for k in range(n):
+        X_train = list(X_folds)
+        X_test  = X_train.pop(k)
+        X_train = np.concatenate(X_train)
+        y_train = list(y_folds)
+        y_test  = y_train.pop(k)
+        y_train = np.concatenate(y_train)
+        scores.append(clf.fit(X_train, y_train).score(X_test, y_test))
+
+    return scores
