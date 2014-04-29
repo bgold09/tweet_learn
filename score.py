@@ -63,7 +63,7 @@ def permutation_test(num_sims, test_size, features, labels):
             test statistic
     """
     la = labels.copy()
-    test_stat = score_stat(features, la, test_size)
+    test_stat = score_stat(features, la, test_size, 1.0)
     count = 0
     for p in xrange(0, num_sims):
         random.shuffle(la)
