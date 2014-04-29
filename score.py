@@ -43,8 +43,9 @@ def score_stat(features, labels, test_size, penalty):
         Returns:
             accuracy of the model's classification of test_size data points
     """
-    clf = svm.SVC(kernel='linear', C=penalty).fit(features[:-test_size], labels[:-test_size])
+    clf = svm.SVC(kernel='rbf', C=penalty).fit(features[:-test_size], labels[:-test_size])
     score = clf.score(features[-test_size:], labels[-test_size:])
+#    print score
     return score
 
 

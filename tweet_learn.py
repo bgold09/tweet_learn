@@ -17,10 +17,10 @@ tweet_subset = "tweetSubset_danielle.csv"
 transformed_set = "features.csv"
 train_test_set = "dani_tweets.csv"
     
-def fit_plot(ml, c):
+def classify(ml, c):
     """use a SVM to create a classifier where ml[0] is the feature matrix and ml[1] is the labels. c is the regularization parameter for the trade-off between the separating margin and the number of errors"""
 
-    return svm.SVC(kernel='linear', C=c)
+    return svm.SVC(kernel='rbf', C=c)
     
 #---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
