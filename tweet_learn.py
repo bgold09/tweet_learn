@@ -17,34 +17,11 @@ tweet_subset = "tweetSubset_danielle.csv"
 transformed_set = "features.csv"
 train_test_set = "dani_tweets.csv"
     
-def fit_plot(ml):
-    """use a SVM to create a classifier and make a plot of the data points"""
-    X = ml[0]
-    Y = ml[1]
-    clf = svm.SVC(kernel='linear', C=1).fit(ml[0], ml[1])
+def fit_plot(ml, c):
+    """use a SVM to create a classifier where ml[0] is the feature matrix and ml[1] is the labels. c is the regularization parameter for the trade-off between the separating margin and the number of errors"""
+
+    return svm.SVC(kernel='linear', C=c)
     
-    w = clf.coef_[0]
-    xx = np.linspace(-5, 5)
-    yy = np.dot(w, xx) - (clf.intercept_[0]) / np.dot(w, w)
-
-    b = clf.support_vectors_[0]
-    yy_down = a * xx + (b[1] - a * b[0])
-    b = clf.support_vectors_[-1]
-    yy_up = a * xx + (b[1] - a * b[0])
-    pl.plot(xx, yy, 'k-')
-    pl.plot(xx, yy_down, 'k--')
-    pl.plot(xx, yy_up, 'k--')
-
-    pl.plot(xx, yy, 'k-')
-    pl.plot(xx, yy_down, 'k--')
-    pl.plot(xx, yy_up, 'k--')
-
-    pl.scatter(clf.support_vectors_[:, 0], clf.support_vectors_[:, 1], s=80, facecolors='none')
-    pl.scatter(X[:, 0], X[:, 1], c=Y, cmap=pl.cm.Paired)
-
-    pl.show()
-
-    return clf
 #---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
 def extract_transform_data(tbl_name, a, b):
@@ -186,19 +163,6 @@ def get_dict_corpus():
     return (dictionary, corpus)
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
-def cross_validation(n, ml, penalty):
-    """return the scores for 'n' fold cross validation"""
-    clf = svm.SVC(kernel='linear', C=penalty).fit(ml[0], ml[1])
-    X_folds = np.array_split(ml[0], n)
-    y_folds = np.array_split(ml[1], n)
-    scores = list()
-    for k in xrange(n):
-        X_train = list(X_folds)
-        X_test  = X_train.pop(k)
-        X_train = np.concatenate(X_train)
-        y_train = list(y_folds)
-        y_test  = y_train.pop(k)
-        y_train = np.concatenate(y_train)
-        scores.append(clf.fit(X_train, y_train).score(X_test, y_test))
+
 
     return scores
