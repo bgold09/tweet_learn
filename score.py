@@ -48,12 +48,12 @@ def score_stat(features, labels, test_size, penalty):
     return score
 
 
-def permutation_test(num_sims, folds, test_size, features, labels):
+def permutation_test(num_sims, test_size, features, labels):
     """Run a permutation test   
 
         Args:
             num_sims: number of simulations to run
-            folds: number of folds to use for cross validation
+            test_size: number of data points to test over
             features: feature matrix
             labels: labels for feature matrix
 
@@ -67,7 +67,7 @@ def permutation_test(num_sims, folds, test_size, features, labels):
     count = 0
     for p in xrange(0, num_sims):
         random.shuffle(la)
-        t = score_stat(features, la, test_size)
+        t = score_stat(features, la, test_size, 1.0)
         if t >= test_stat:
             count += 1
     pvalue = count / float(num_sims)
