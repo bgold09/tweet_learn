@@ -135,14 +135,14 @@ def confusion_metrics(cft):
         False positive rate of the classifier with confusion table cft. 
         type: float
     """
-    accuracy = confusion_accuracy(cft)
-    precision = confusion_precision(cft)
-    recall = confusion_recall(cft)
-    false_positive = confusion_false_positive(cft)
-    specificity = confusion_specificity(cft)
+    acc = accuracy(cft)
+    prec = precision(cft)
+    rec = recall(cft)
+    fp = false_positive(cft)
+    spec = specificity(cft)
     fmt = "accuracy = %s\nprecision = %s\ntrue positive = %s\n" + \
             "false_positive = %s\ntrue negative = %s"
-    print(fmt % (accuracy, precision, recall, false_positive, specificity))
+    print(fmt % (acc, prec, rec, fp, spec))
 
 def confusion_matrix_show(cm):
     """Display confusion matrix cm in a new window
