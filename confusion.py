@@ -33,16 +33,17 @@ def generate_matrix(classifier, data, targets, test_size):
     cfm = confusion_matrix(y_test, y_pred)
     return cfm
 
-
 def matrix_to_table(cfm, label):
-    """Convert a confusion matrix to a confusion table.
+    """Convert a confusion matrix to a confusion table of 
+       true/false positive/negative values
 
     Args:
         cfm: confusion matrix to convert
         label: label index for the confusion table
 
     Returns:
-        The confusion table for cfm as a 2x2 numpy array.
+        The confusion table of true/false positive/negative values for cfm 
+        as a 2x2 numpy array.
     """
     predicfted = cfm[label]
     acftual    = [cfm[i][label] for i in range(len(cfm))]
@@ -54,7 +55,6 @@ def matrix_to_table(cfm, label):
     
     cft = np.array([true_pos, false_neg, false_pos, true_neg]).reshape(2, 2)
     return cft
-
 
 def accuracy(cft):
     """Compute the accuracy of the classifier with confusion table cft.
@@ -70,7 +70,6 @@ def accuracy(cft):
     accuracy = (cft[tp] + cft[tn]) / float(np.sum(cft))
     return accuracy
 
-
 def precision(cft):
     """Compute the precision of the classifier with confusion table cft.
 
@@ -83,7 +82,6 @@ def precision(cft):
     """
     precision = cft[tp] / float(cft[tp] + cft[fp])
     return precision
-
 
 def recall(cft):
     """Compute the recall (i.e. true positive rate) of the classifier 
@@ -99,9 +97,9 @@ def recall(cft):
     recall = cft[tp] / float(cft[tp] + cft[fn])
     return recall
 
-
 def false_positive(cft):
-    """Compute the false positive rate of the classifier with confusion table cft.
+    """Compute the false positive rate of the classifier with 
+       confusion table cft.
 
     Args:
         cft: confusion table for the classifier
@@ -112,7 +110,6 @@ def false_positive(cft):
     """
     false_positive = cft[fp] / float(cft[fp] + cft[tn])
     return false_positive
-
 
 def specificity(cft):
     """Compute the specificity (i.e. true negative rate) of the classifier 
@@ -127,7 +124,6 @@ def specificity(cft):
     """
     specificity = cft[tn] / float(cft[tn] + cft[fp])
     return specificity
-
 
 def confusion_metrics(cft):
     """Compute metrics of the classifier with confusion table cft.
@@ -148,7 +144,6 @@ def confusion_metrics(cft):
             "false_positive = %s\ntrue negative = %s"
     print(fmt % (accuracy, precision, recall, false_positive, specificity))
 
-
 def confusion_matrix_show(cm):
     """Display confusion matrix cm in a new window
     
@@ -160,6 +155,6 @@ def confusion_matrix_show(cm):
     pl.title('Confusion matrix')
     pl.colorbar()
     pl.ylabel('True label')
-    pl.xlabel('Predicfted label')
+    pl.xlabel('Predicted label')
     pl.show()
 
