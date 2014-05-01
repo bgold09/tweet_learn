@@ -27,7 +27,7 @@ def generate_matrix(classifier, data, targets, test_size):
             train_test_split(data, targets, test_size=test_size, random_state=0)
     
     # Run the classifier
-    y_pred = classifier.fit(x_train, y_train).predicft(x_test)
+    y_pred = classifier.fit(x_train, y_train).predict(x_test)
     
     # Compute the Confusion matrix
     cfm = confusion_matrix(y_test, y_pred)
@@ -151,10 +151,10 @@ def confusion_matrix_show(cm):
         cm: confusion matrix to display
     """
     # Show confusion matrix in a new window
-    pl.matshow(cft)
+    pl.matshow(cm)
     pl.title('Confusion matrix')
     pl.colorbar()
-    pl.ylabel('True label')
-    pl.xlabel('Predicted label')
+    pl.xlabel('Predicted class')
+    pl.ylabel('True class')
     pl.show()
 
