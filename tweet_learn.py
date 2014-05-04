@@ -16,20 +16,21 @@ import MySQLdb as mdb
 tweet_subset = "tweetSubset_danielle.csv"
 transformed_set = "features.csv"
 train_test_set = "dani_tweets.csv"
+DB_NAME = "twitter"
     
-def classify(ml, c):
+def classify(ml):
     """use a SVM to create a classifier where ml[0] is the feature matrix and ml[1] is the labels. c is the regularization parameter for the trade-off between the separating margin and the number of errors"""
 
-    return svm.SVC(kernel='rbf', C=c)
+    return svm.SVC(kernel='linear')
     
 #---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
-def extract_transform_data(tbl_name, a, b):
+def extract_features(tbl_name, a, b):
     """PRE:  java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML  --------- MUST BE RUNNING to get the Named-Entity data. 
              The other data comes from the SQL table init_data     
       POST: populate the NER columns in our dataset"""
 
-    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
     cur = con.cursor(mdb.cursors.DictCursor)
     tweet_set = list()
     labels = list()
@@ -64,13 +65,14 @@ def extract_transform_data(tbl_name, a, b):
         tweet = row["tweet"]
         if tweet == "":
             continue
-        ret = int(tweet[0].__contains__('@'))
-        rep = int(tweet[0:2].__contains__('RT'))
+        rep = int(tweet[0].__contains__('@'))
+        ret = int(tweet[0:2].__contains__('RT'))
         cent = row["eig_centrality"]
         if cent == None:
             continue
         
         li = [website, ret_cnt, rep, ret, num_people, num_orgs, num_locs, cent]
+#        li = [rep, ret, ret_cnt]
         label = row["I_c"]
 
         labels.append(label)
@@ -83,17 +85,17 @@ def extract_transform_data(tbl_name, a, b):
     return (np.array(tweet_set), np.array(labels))
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------
-def store_features(tweet_set):
-    """create and populate a sql table of features"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+def store_features(tt_set, tbl_name):
+    """create and populate a sql table 'tbl_name' of features 'tt_set'"""
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
     cur = con.cursor(mdb.cursors.DictCursor)
-    cur.execute("drop table if exists nght_regime;")
-    cur.execute("create table features (website varchar(140), ret_cnt smallint, rep smallint, ret smallint, num_people smallint, num_orgs smallint, num_locs smallint);")
+    cur.execute("drop table if exists {0};".format(tbl_name))
+#    cur.execute("create table {0} (website varchar(140), ret_cnt smallint, rep smallint, ret smallint, num_people smallint, num_orgs smallint, num_locs smallint, eig_centrality float);".format(tbl_name))
+    cur.execute("create table {0} (website varchar(140), rep smallint, eig_cent float, ner_count smallint, ret_cnt smallint);".format(tbl_name))
         
-    for row in tweet_set:
-        cur.execute("insert into features (website, ret_cnt, rep, ret, num_people, num_orgs, num_locs) values (%s, %s, %s, %s, %s, %s, %s, %s)", (row["website"], row["ret_cnt"], row["label"], row["rep"], row["ret"], row["num_people"], row["num_orgs"], row["num_locs"]))
+    for row in tt_set:
+        cur.execute("insert into {0} (website, rep, eig_cent, ner_count, ret_cnt) values (%s, %s, %s, %s, %s)".format(tbl_name), (row[0], row[1], row[2], row[3], row[4]))
 
-    os.chdir("../")
     con.commit()
     cur.close()
     con.close()
@@ -101,7 +103,7 @@ def store_features(tweet_set):
 #---------------------------------------------------------------------
 def store_initial_data(tbl_name):
     """populate SQL table 'tbl_name' with CSV 'train_test_set'"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
     cur = con.cursor(mdb.cursors.DictCursor)
     cur.execute("drop table if exists {0};".format(tbl_name))
     cur.execute("create table {0} (tweet_id bigint, source_user_id bigint, rt_user_id bigint, tweet varchar(255), website varchar(140), tweet_time timestamp, raw_retweet_count bigint, I_c smallint);".format(tbl_name))
@@ -126,7 +128,7 @@ def store_initial_data(tbl_name):
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------
 def add_centrality_feature(tbl_name):
-    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter") 
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
     cur = con.cursor(mdb.cursors.DictCursor)
     
     cur.execute("alter table {0} add column eig_centrality float".format(tbl_name))
@@ -136,33 +138,68 @@ def add_centrality_feature(tbl_name):
     con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
-def get_dict_corpus():
-    """return and serialize dictionary and corpus from tweets"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db="twitter", charset='utf8') 
+def sample_testing_data(tbl_name, size):
+    """store the testing data into a SQL table 'tbl_name'"""
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
     cur = con.cursor(mdb.cursors.DictCursor)
+    cur.execute("drop table if exists {0};".format(tbl_name))
+    cur.execute("create table {0} (tweet_id bigint, source_user_id bigint, rt_user_id bigint, tweet varchar(255), website varchar(140), tweet_time timestamp, raw_retweet_count bigint);".format(tbl_name))
 
-    cur.execute("select tweet from init data")
-    rows = cur.fetchall()
-    tweets = list()
-    for row in rows:
-        tweets.append(row['tweet'].split())
+    qry = "insert into {0} (tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count) select tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count from tweets order by RAND() limit %s".format(tbl_name)
 
-    with open("data/stop_words.txt") as f:
-        stop_words = np.array(f.read().splitlines())
-        
-    for tweet in tweets:
-        for word in tweet:
-            if word in stop_words:
-                tweet.remove(word)
-
-    dictionary = gs.corpora.Dictionary(tweets)
-    dictionary.save("data/lda.dict")
-    corpus = [dictionary.doc2bow(tweet) for tweet in tweets]
-    gs.corpora.MmCorpus.serialize("data/lda-corpus.mm", corpus)
-
-    return (dictionary, corpus)
+    cur.execute(qry, (size))
+    con.commit()
+    cur.close()
+    con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
+def extract_features2(tbl_name, flag):
+    """return a training and testing set of features"""
+    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME, charset='utf8') 
+    cur = con.cursor(mdb.cursors.DictCursor)
+    
+    features = list()
+    labels = list()
+    tagger = ner.SocketNER(host='localhost', port=8080)
+    cur.execute("select * from {0}".format(tbl_name))
+    rows = cur.fetchall()
+    for row in rows:
+        tweet = row["tweet"]
+        subfeatures = list()
+        if tweet == "":
+            continue
+        if flag:
+            di = tagger.get_entities(tweet)
+            num_people = num_orgs = num_locs = 0
+            
+            if 'PERSON' in di:
+                num_people = len(di['PERSON']) 
+            if 'ORGANIZATION' in di:
+                num_orgs = len(di['ORGANIZATION'])
+            if 'LOCATION' in di:
+                num_locs = len(di['LOCATION'])
+            subfeatures.append([num_people, num_orgs, num_locs])
 
+        website = row["website"]
+        if website == '':
+            website = 0
+        else:
+            website = 1
+        if row['rt_user_id'] == -1:
+            ret = -1
+        else:
+            ret = 1
+        rep = int(tweet[0].__contains__('@'))
+#        cent = row["eig_centrality"]
+#        if cent == None:
+#            continue
+        feat_part = [website, rep]
+        feat_part.extend(subfeatures)
+        features.append(feat_part)
+        labels.append(ret)
 
-    return scores
+    print "subset of features: ", features[:10]
+
+    cur.close()
+    con.close()
+    return (np.array(features), np.array(labels))

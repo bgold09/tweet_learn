@@ -1,0 +1,14 @@
+1) Whether the result from a model is good or not. What should  you 
+compare it to?
+
+2) What is the effect of noise on the results you are seeing? This could 
+be due to training or testing set size, possibilities of measuring 
+error, missing values, etc.
+
+3) How does playing around with features affect the model?
+
+4) What can you learn from the model and the data? We spent a 
+significant portion of this class discussing computational ways of 
+testing different questions.
+
+5) Tables and graphs are much easier to read than raw output readings.
