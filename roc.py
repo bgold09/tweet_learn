@@ -5,6 +5,10 @@ from sklearn.cross_validation import train_test_split
 from sklearn.utils import shuffle
 from sklearn.metrics import roc_curve, auc
 
+FONT = {'family' : 'monospace', 
+        'weight' : 'bold',
+        'size'   : 15}
+
 def compute_curve(data, targets, test_size):
     """Compute a receiever operating characteristic (ROC) curve 
 
@@ -47,6 +51,7 @@ def display_curve(fpr, tpr, roc_auc):
     pl.ylabel('True Positive Rate')
     pl.title('ROC Curve')
     pl.legend(loc="lower right")
+    pl.rc('font', **FONT)
     pl.show()
 
 def compute_display_curve(data, targets, test_size):
@@ -71,11 +76,12 @@ def mult_tests(data, targets, test_sizes):
                     for all i in test_sizes, 0 < test_size[i] < len(data)
     """
     pl.clf()
+    n = len(data)
     results = list()
     for i in xrange(0, len(test_sizes)):
         fpr, tpr, roc_auc = compute_curve(data, targets, test_sizes[i])
-        pl.plot(fpr, tpr, label='ROC curve (test size = %d, area = %0.2f)' % \
-                (test_sizes[i], roc_auc))
+        pl.plot(fpr, tpr, label='ROC curve (training size = %d, area = %0.2f)' % \
+                (n - test_sizes[i], roc_auc))
 
     pl.plot([0, 1], [0, 1], 'k--')
     pl.xlim([0.0, 1.0])
@@ -84,5 +90,6 @@ def mult_tests(data, targets, test_sizes):
     pl.ylabel('True Positive Rate')
     pl.title('ROC Curves')
     pl.legend(loc="lower right")
+    pl.rc('font', **FONT)
     pl.show()
 
