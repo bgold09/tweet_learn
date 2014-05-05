@@ -31,49 +31,6 @@ def cross_validation(n, features, labels, penalty):
     return np.array(scores)
 
 
-def score_stat(features, labels, test_size, penalty):
-    """Train a SVM and get the score of classifying test_size data points
-
-    Args:
-        features: feature matrix
-        labels: labels for feature matrix
-        test_size: size of the testing set
-        penalty: penalty parameter for classifier
-
-    Returns:
-        accuracy of the model's classification of test_size data points
-    """
-    clf = svm.SVC(kernel='rbf', C=penalty).fit(features[:-test_size], labels[:-test_size])
-    score = clf.score(features[-test_size:], labels[-test_size:])
-#    print score
-    return score
-
-
-def permutation_test(num_sims, test_size, features, labels):
-    """Run a permutation test   
-
-    Args:
-        num_sims: number of simulations to run
-        test_size: number of data points to test over
-        features: feature matrix
-        labels: labels for feature matrix
-
-    Returns: 
-        p-value for the permutation test, i.e. how many tests had 
-        a test statistic greater than or equal to the original 
-        test statistic
-    """
-    la = labels.copy()
-    test_stat = score_stat(features, la, test_size, 1.0)
-    count = 0
-    for p in xrange(0, num_sims):
-        random.shuffle(la)
-        t = score_stat(features, la, test_size, 1.0)
-        if t >= test_stat:
-            count += 1
-    pvalue = count / float(num_sims)
-    return pvalue
-
 def plot_regularization(clf, ml):
     X = ml[0]
     Y = ml[1]
