@@ -125,7 +125,7 @@ def specificity(cft):
     specificity = cft[tn] / float(cft[tn] + cft[fp])
     return specificity
 
-def confusion_metrics(cft):
+def metrics(cft):
     """Compute metrics of the classifier with confusion table cft.
 
     Args:
@@ -144,14 +144,14 @@ def confusion_metrics(cft):
             "false_positive = %s\ntrue negative = %s"
     print(fmt % (acc, prec, rec, fp, spec))
 
-def confusion_matrix_show(cm):
+def show_matrix(cfm):
     """Display confusion matrix cm in a new window
     
     Args: 
-        cm: confusion matrix to display
+        cfm: confusion matrix to display
     """
     # Show confusion matrix in a new window
-    pl.matshow(cm)
+    pl.matshow(cfm)
     pl.title('Confusion matrix')
     pl.colorbar()
     pl.xlabel('Predicted class')

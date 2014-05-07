@@ -19,19 +19,22 @@ train_test_set = "dani_tweets.csv"
 DB_NAME = "twitter"
     
 def classify(ml):
-    """use a SVM to create a classifier where ml[0] is the feature matrix and ml[1] is the labels. c is the regularization parameter for the trade-off between the separating margin and the number of errors"""
-
     return svm.SVC(kernel='linear')
     
-#---------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------
-def extract_features(tbl_name, a, b):
-    """PRE:  java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML  --------- MUST BE RUNNING to get the Named-Entity data. 
-             The other data comes from the SQL table init_data     
-      POST: populate the NER columns in our dataset"""
 
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
-    cur = con.cursor(mdb.cursors.DictCursor)
+def extract_features(conn, tbl_name, a, b):
+    """PRE: Populates the table with NER data, extracts all data for models.
+
+            The other data comes from the SQL table init_data.
+            The Stanford NER server must be running as described in the README. 
+
+    Args:
+        conn: valid handle to the database
+        tbl_name: name of the table to use for initial raw data
+        a: lower index of data to extract
+        b: upper index of data to extract
+    """
+    cur = conn.cursor(mdb.cursors.DictCursor)
     tweet_set = list()
     labels = list()
     tagger = ner.SocketNER(host='localhost', port=8080)
@@ -81,14 +84,12 @@ def extract_features(tbl_name, a, b):
     print "subset of features: ", tweet_set[:10]
     
     cur.close()
-    con.close()
     return (np.array(tweet_set), np.array(labels))
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------
-def store_features(tt_set, tbl_name):
+def store_features(conn, tt_set, tbl_name):
     """create and populate a sql table 'tbl_name' of features 'tt_set'"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
-    cur = con.cursor(mdb.cursors.DictCursor)
+    cur = conn.cursor(mdb.cursors.DictCursor)
     cur.execute("drop table if exists {0};".format(tbl_name))
 #    cur.execute("create table {0} (website varchar(140), ret_cnt smallint, rep smallint, ret smallint, num_people smallint, num_orgs smallint, num_locs smallint, eig_centrality float);".format(tbl_name))
     cur.execute("create table {0} (website varchar(140), rep smallint, eig_cent float, ner_count smallint, ret_cnt smallint);".format(tbl_name))
@@ -96,15 +97,13 @@ def store_features(tt_set, tbl_name):
     for row in tt_set:
         cur.execute("insert into {0} (website, rep, eig_cent, ner_count, ret_cnt) values (%s, %s, %s, %s, %s)".format(tbl_name), (row[0], row[1], row[2], row[3], row[4]))
 
-    con.commit()
+    conn.commit()
     cur.close()
-    con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------
-def store_initial_data(tbl_name):
+def store_initial_data(conn, tbl_name):
     """populate SQL table 'tbl_name' with CSV 'train_test_set'"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
-    cur = con.cursor(mdb.cursors.DictCursor)
+    cur = conn.cursor(mdb.cursors.DictCursor)
     cur.execute("drop table if exists {0};".format(tbl_name))
     cur.execute("create table {0} (tweet_id bigint, source_user_id bigint, rt_user_id bigint, tweet varchar(255), website varchar(140), tweet_time timestamp, raw_retweet_count bigint, I_c smallint);".format(tbl_name))
 
@@ -122,41 +121,35 @@ def store_initial_data(tbl_name):
                 continue
             cur.execute("insert into {0} (tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count, I_c) values (%s, %s, %s, %s, %s, %s, %s, %s)".format(tbl_name), (row["tweet_id"], row["source_user_id"], row["rt_user_id"], row["tweet"], row["website"], row["tweet_time"], row["raw_retweet_count"], ic))
 
-    con.commit()
+    conn.commit()
     cur.close()
-    con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------
-def add_centrality_feature(tbl_name):
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
-    cur = con.cursor(mdb.cursors.DictCursor)
+def add_centrality_feature(conn, tbl_name):
+    cur = conn.cursor(mdb.cursors.DictCursor)
     
     cur.execute("alter table {0} add column eig_centrality float".format(tbl_name))
     cur.execute("update {0} id inner join users u on id.source_user_id = u.user_id set id.eig_centrality = u.eigenvector_centrality".format(tbl_name))
-    con.commit()
+    conn.commit()
     cur.close()
-    con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
-def sample_testing_data(tbl_name, size):
+def sample_testing_data(conn, tbl_name, size):
     """store the testing data into a SQL table 'tbl_name'"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME) 
-    cur = con.cursor(mdb.cursors.DictCursor)
+    cur = conn.cursor(mdb.cursors.DictCursor)
     cur.execute("drop table if exists {0};".format(tbl_name))
     cur.execute("create table {0} (tweet_id bigint, source_user_id bigint, rt_user_id bigint, tweet varchar(255), website varchar(140), tweet_time timestamp, raw_retweet_count bigint);".format(tbl_name))
 
     qry = "insert into {0} (tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count) select tweet_id, source_user_id, rt_user_id, tweet, website, tweet_time, raw_retweet_count from tweets order by RAND() limit %s".format(tbl_name)
 
     cur.execute(qry, (size))
-    con.commit()
+    conn.commit()
     cur.close()
-    con.close()
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------            
-def extract_features2(tbl_name, flag):
+def extract_features2(conn, tbl_name, flag):
     """return a training and testing set of features"""
-    con = mdb.connect(host="localhost", user="root", passwd="", db=DB_NAME, charset='utf8') 
-    cur = con.cursor(mdb.cursors.DictCursor)
+    cur = conn.cursor(mdb.cursors.DictCursor)
     
     features = list()
     labels = list()
@@ -201,5 +194,4 @@ def extract_features2(tbl_name, flag):
     print "subset of features: ", features[:10]
 
     cur.close()
-    con.close()
     return (np.array(features), np.array(labels))

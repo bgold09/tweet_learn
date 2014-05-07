@@ -2,7 +2,6 @@ import numpy as np
 import pylab as pl
 from sklearn import svm
 from sklearn.cross_validation import train_test_split
-from sklearn.utils import shuffle
 from sklearn.metrics import roc_curve, auc
 
 FONT = {'family' : 'monospace', 

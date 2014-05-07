@@ -7,45 +7,6 @@ import re
 
 DB_NAME = "twitter"
 
-def hashtag_list():
-    hashtags = ["start"]
-    with open("tweetSubset.csv", 'rU') as csvfile:
-        tweet_reader = csv.DictReader(csvfile, delimiter = ',', dialect=csv.excel)
-        tweet_reader.next()
-
-        for row in tweet_reader:
-            tweet = row['tweet']
-            start = 0
-            while start < len(tweet) and tweet.find('#', start) != -1:
-                hashIndex = tweet.find('#', start)
-                i = hashIndex + 1
-                while i < len(tweet) and st.punctuation.find(tweet[i]) == -1 and tweet[i] != ' ':
-                    i += 1
-                if hashtags.count(tweet[hashIndex:i]) == 0:
-                    hashtags.append(tweet[hashIndex:i])
-                start = i + 1
-	hashtags.pop(0)
-    return hashtags
-
-def hashtag_count(hashtags):
-	ht_count = ["start"]
-	with open("tweetSubset.csv", 'rU') as csvfile:
-		tweet_reader = csv.DictReader(csvfile, delimiter = ',', dialect=csv.excel)
-		tweet_reader.next()
-
-		for row in tweet_reader:
-			tweet = row['tweet']
-			htc = [tweet]
-			for hashtag in hashtags:
-				if tweet.find(hashtag) != -1:
-					htc.append(1)
-				else:
-					htc.append(0)
-			ht_count.append(htc)
-	ht_count.pop(0)
-	return ht_count  
-                
-# find all unique hashtags
 def get_hashtags(conn):
     """Find all unique hashtags in testing data tweets (case-insensitive)."""
     all_hashtags = set()
@@ -65,6 +26,7 @@ def get_hashtags(conn):
     
     return all_hashtags
 
+
 def update_hashtag_schema(conn, hashtags):
     """Update the schema init data table with columns for each hashtag in hashtags."""
     curs = conn.cursor()
@@ -81,6 +43,7 @@ def update_hashtag_schema(conn, hashtags):
         name = 'tag_' + tag
         if name not in columns:
             curs.execute('ALTER TABLE init_data ADD ' + name + ' VARCHAR(64) DEFAULT -1')
+
 
 def add_ngram_features(data_tbl):
     """add 'size' features from the top 500 most frequently occuring ngrams"""
@@ -110,5 +73,4 @@ def add_ngram_features(data_tbl):
             ngram_feats[ng['nGram']] = 0          #reset for next feature
         
     return np.array(features)
-
 
