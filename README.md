@@ -1,6 +1,8 @@
 # tweet_learn
 
-The purpose of this project is - using machine learning methods - to predict whether tweets (posts on [twitter](http://twitter.com)) are informative or conversational.
+The purpose of this project is - using machine learning methods - to predict the following about tweets (posts on [twitter](http://twitter.com)):
+1. Are tweets informative or non-informative?
+2. Will a tweet be re-tweeted by another user? 
 
 ## Installation 
 
@@ -32,7 +34,7 @@ wget http://nlp.stanford.edu/software/stanford-ner-2014-01-04.zip
 unzip stanford-ner-2014-01-04.zip
 ```
 
-Start a local NER java server (do this in a separate terminal window, as starting the process in the background will cause the server not to function properly):
+Start a local NER java server (do this in a separate terminal window, as starting the process in the background will cause the server to function improperly):
 
 ```sh
 java -mx1000m -cp stanford-ner.jar edu.stanford.nlp.ie.NERServer -loadClassifier classifiers/ner-eng-ie.crf-3-all2008-distsim.ser.gz -port 8080 -outputFormat inlineXML 
@@ -63,7 +65,7 @@ From a python session:
 
 ### 6. Run tests
 
-Check out [confusion.py](https://github.com/bgold09/tweet_learn/blob/master/confusion.py), [score.py](https://github.com/bgold09/tweet_learn/blob/master/score.py) and [roc.py](https://github.com/bgold09/tweet_learn/blob/master/roc.py) for various methods for testing the quality your models. 
+Check out [confusion.py](https://github.com/bgold09/tweet_learn/blob/master/confusion.py), [score.py](https://github.com/bgold09/tweet_learn/blob/master/score.py) and [roc.py](https://github.com/bgold09/tweet_learn/blob/master/roc.py) for various methods for testing the quality of your models. 
 
 ## License
 
